@@ -12,14 +12,20 @@ class ConfigViewModel(application: Application) : AndroidViewModel(application) 
     private val settingsRepository = SettingsRepository(application)
 
     val endpointUrl = settingsRepository.endpointUrl
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "http://10.0.2.2:3000")
 
     val apiKey = settingsRepository.apiKey
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "VGQCbC1l1FlCHGAEXoB2knShV64Y2-K2MJvMPS1wenc")
 
     fun saveSettings(url: String, key: String) {
         viewModelScope.launch {
             settingsRepository.saveSettings(url, key)
+        }
+    }
+    
+    fun resetToDefaults() {
+        viewModelScope.launch {
+            settingsRepository.saveSettings("http://10.0.2.2:3000", "VGQCbC1l1FlCHGAEXoB2knShV64Y2-K2MJvMPS1wenc")
         }
     }
 }

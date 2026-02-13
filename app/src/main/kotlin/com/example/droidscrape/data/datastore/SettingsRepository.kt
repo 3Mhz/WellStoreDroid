@@ -31,7 +31,7 @@ class SettingsRepository(private val context: Context) {
 
     val apiKey: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.API_KEY] ?: "VGQCbC-l1FlCHGAEXoB2knShV64Y2-K2MJvMPS1wenc"
+            preferences[PreferencesKeys.API_KEY] ?: "VGQCbC1l1FlCHGAEXoB2knShV64Y2-K2MJvMPS1wenc"
         }
 
     suspend fun saveSettings(url: String, apiKey: String) {
@@ -54,14 +54,20 @@ class SettingsRepository(private val context: Context) {
 
     val deviceId: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.DEVICE_ID] ?: run {
+            preferences[PreferencesKeys.DEVICE_ID] ?: ""
+        }
+        
+    suspend fun ensureDeviceId(): String {
+        var currentId = ""
+        context.dataStore.edit { preferences ->
+            currentId = preferences[PreferencesKeys.DEVICE_ID] ?: run {
                 val newId = UUID.randomUUID().toString()
-                context.dataStore.edit {
-                    it[PreferencesKeys.DEVICE_ID] = newId
-                }
+                preferences[PreferencesKeys.DEVICE_ID] = newId
                 newId
             }
         }
+        return currentId
+    }
 
     val lastCollectionTime: Flow<Long?> = context.dataStore.data
         .map { preferences ->

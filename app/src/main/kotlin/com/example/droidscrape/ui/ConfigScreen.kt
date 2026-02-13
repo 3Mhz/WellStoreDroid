@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -37,7 +38,14 @@ fun ConfigScreen(navController: NavController, viewModel: ConfigViewModel = view
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(32.dp))
-        Button(onClick = { navController.popBackStack() }) {
+        
+        OutlinedButton(onClick = { viewModel.resetToDefaults() }, modifier = Modifier.fillMaxWidth()) {
+            Text("Reset to Defaults")
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Button(onClick = { navController.popBackStack() }, modifier = Modifier.fillMaxWidth()) {
             Text("Done")
         }
     }

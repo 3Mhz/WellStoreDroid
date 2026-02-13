@@ -28,16 +28,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _testConnectionResult.value = "Sending..."
             try {
                 val apiKey = settingsRepository.apiKey.first()
-                val endpointUrl = settingsRepository.endpointUrl.first()
+                var endpointUrl = settingsRepository.endpointUrl.first().trim()
+                val deviceId = settingsRepository.ensureDeviceId()
+                
+                // Ensure the URL starts with a protocol
+                if (!endpointUrl.startsWith("http://") && !endpointUrl.startsWith("https://")) {
+                    endpointUrl = "http://$endpointUrl"
+                }
+                
+                // Ensure no trailing slash for consistent concatenation
+                val normalizedUrl = endpointUrl.removeSuffix("/")
+                val fullUrl = "$normalizedUrl/api/ingest"
+
                 val apiService = RetrofitClient.create(apiKey)
 
-                val testPayload = createTestPayload()
-                val response = apiService.ingest(endpointUrl + "/api/ingest", testPayload)
+                val testPayload = createTestPayload(deviceId)
+                val response = apiService.ingest(fullUrl, testPayload)
 
                 if (response.isSuccessful) {
                     _testConnectionResult.value = "Success! Code: ${response.code()}"
                 } else {
-                    _testConnectionResult.value = "Error: ${response.code()} - ${response.errorBody()?.string()}"
+                    val errorMsg = response.errorBody()?.string() ?: "Unknown error"
+                    _testConnectionResult.value = "Error: ${response.code()} - $errorMsg"
                 }
             } catch (e: Exception) {
                 _testConnectionResult.value = "Exception: ${e.message}"
@@ -45,11 +57,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun createTestPayload(): IngestPayload {
+    private fun createTestPayload(deviceId: String): IngestPayload {
         val now = Instant.now().toString()
         return IngestPayload(
             schemaVersion = 1,
-            deviceId = "b3c7f0ab-95a6-4f2a-9eec-a1f6fd4a9c55",
+            deviceId = deviceId,
             collectedAt = now,
             samples = listOf(
                 Sample(
