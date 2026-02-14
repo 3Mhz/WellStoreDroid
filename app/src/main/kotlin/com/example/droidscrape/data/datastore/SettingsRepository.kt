@@ -1,6 +1,7 @@
 package com.example.droidscrape.data.datastore
 
 import android.content.Context
+import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -18,6 +19,7 @@ class SettingsRepository(private val context: Context) {
     private object PreferencesKeys {
         val ENDPOINT_URL = stringPreferencesKey("endpoint_url")
         val API_KEY = stringPreferencesKey("api_key")
+        val USERNAME = stringPreferencesKey("username")
         val COLLECTION_ENABLED = stringPreferencesKey("collection_enabled")
         val DEVICE_ID = stringPreferencesKey("device_id")
         val LAST_COLLECTION_TIME = longPreferencesKey("last_collection_time")
@@ -33,11 +35,20 @@ class SettingsRepository(private val context: Context) {
         .map { preferences ->
             preferences[PreferencesKeys.API_KEY] ?: "VGQCbC1l1FlCHGAEXoB2knShV64Y2-K2MJvMPS1wenc"
         }
+        
+    val username: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.USERNAME] ?: "User"
+        }
 
-    suspend fun saveSettings(url: String, apiKey: String) {
+    suspend fun saveSettings(url: String, apiKey: String, username: String) {
         context.dataStore.edit {
             it[PreferencesKeys.ENDPOINT_URL] = url
             it[PreferencesKeys.API_KEY] = apiKey
+            it[PreferencesKeys.USERNAME] = username
+            
+            // Re-generate device ID whenever name/username changes to keep it in sync
+            it[PreferencesKeys.DEVICE_ID] = formatDeviceId(username)
         }
     }
 
@@ -60,13 +71,41 @@ class SettingsRepository(private val context: Context) {
     suspend fun ensureDeviceId(): String {
         var currentId = ""
         context.dataStore.edit { preferences ->
-            currentId = preferences[PreferencesKeys.DEVICE_ID] ?: run {
-                val newId = UUID.randomUUID().toString()
-                preferences[PreferencesKeys.DEVICE_ID] = newId
-                newId
+            val existing = preferences[PreferencesKeys.DEVICE_ID]
+            val currentUsername = preferences[PreferencesKeys.USERNAME] ?: "User"
+            
+            // Update if empty, UUID, or doesn't start with the current username
+            val needsUpdate = existing.isNullOrBlank() || 
+                             isUuid(existing) || 
+                             !existing.startsWith(currentUsername)
+            
+            if (needsUpdate) {
+                val readableName = formatDeviceId(currentUsername)
+                preferences[PreferencesKeys.DEVICE_ID] = readableName
+                currentId = readableName
+            } else {
+                currentId = existing!!
             }
         }
         return currentId
+    }
+
+    private fun formatDeviceId(username: String): String {
+        val deviceName = "${Build.MANUFACTURER} ${Build.MODEL}".capitalizeWords()
+        return "$username ($deviceName)"
+    }
+
+    private fun isUuid(value: String): Boolean {
+        return try {
+            UUID.fromString(value)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun String.capitalizeWords(): String = split(" ").joinToString(" ") { word ->
+        word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
     }
 
     val lastCollectionTime: Flow<Long?> = context.dataStore.data
